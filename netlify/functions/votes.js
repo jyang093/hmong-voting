@@ -1,22 +1,24 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const { getStore } = require("@netlify/blobs");
+const { connectLambda, getStore } = require("@netlify/blobs");
 
 const STORE_NAME = "votes";
 
-async function getVotes() {
+async function getVotes(event) {
+  connectLambda(event);
   const store = getStore(STORE_NAME);
   const data = await store.get("totals", { type: "json" });
   return data || { spongebob: 0, patrick: 0, squidward: 0 };
 }
 
-async function saveVotes(votes) {
+async function saveVotes(event, votes) {
+  connectLambda(event);
   const store = getStore(STORE_NAME);
   await store.setJSON("totals", votes);
 }
 
 exports.handler = async (event) => {
   if (event.httpMethod === "GET") {
-    const votes = await getVotes();
+    const votes = await getVotes(event);
     return {
       statusCode: 200,
       headers: {
@@ -45,16 +47,16 @@ exports.handler = async (event) => {
       const session = stripeEvent.data.object;
       const linkMap = {
         "plink_1URMC5B545EsmqP6lJEk5kAD": "spongebob"
-        // add the other plink_ IDs here
+        // add other plink_ IDs here
       };
 
       const contestantId = linkMap[session.payment_link];
       const quantity = session.amount_total ? Math.round(session.amount_total / 500) : 1;
 
       if (contestantId) {
-        const votes = await getVotes();
+        const votes = await getVotes(event);
         votes[contestantId] = (votes[contestantId] || 0) + quantity;
-        await saveVotes(votes);
+        await saveVotes(event, votes);
       }
     }
 
