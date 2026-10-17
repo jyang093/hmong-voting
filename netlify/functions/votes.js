@@ -1,13 +1,22 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const { getStore } = require("@netlify/blobs");
 
-let votes = {
-  spongebob: 0,
-  patrick: 0,
-  squidward: 0
-};
+const STORE_NAME = "votes";
+
+async function getVotes() {
+  const store = getStore(STORE_NAME);
+  const data = await store.get("totals", { type: "json" });
+  return data || { spongebob: 0, patrick: 0, squidward: 0 };
+}
+
+async function saveVotes(votes) {
+  const store = getStore(STORE_NAME);
+  await store.setJSON("totals", votes);
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === "GET") {
+    const votes = await getVotes();
     return {
       statusCode: 200,
       headers: {
@@ -34,19 +43,18 @@ exports.handler = async (event) => {
 
     if (stripeEvent.type === "checkout.session.completed") {
       const session = stripeEvent.data.object;
-      // Map your Stripe Payment Link IDs to contestants
-      // You'll replace these with the real Payment Link IDs from Stripe
       const linkMap = {
-        "plink_1URH5fB545EsmqP6TD5NiGEK": "spongebob",
-        "plink_1URM7LB545EsmqP6jUF72Lml": "patrick",
-        "plink_1URMC5B545EsmqP6lJEk5kAD": "squidward"
+        "plink_1URMC5B545EsmqP6lJEk5kAD": "spongebob"
+        // add the other plink_ IDs here
       };
 
       const contestantId = linkMap[session.payment_link];
       const quantity = session.amount_total ? Math.round(session.amount_total / 500) : 1;
 
-      if (contestantId && votes.hasOwnProperty(contestantId)) {
-        votes[contestantId] += quantity;
+      if (contestantId) {
+        const votes = await getVotes();
+        votes[contestantId] = (votes[contestantId] || 0) + quantity;
+        await saveVotes(votes);
       }
     }
 
