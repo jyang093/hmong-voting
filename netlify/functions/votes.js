@@ -46,7 +46,9 @@ exports.handler = async (event) => {
     if (stripeEvent.type === "checkout.session.completed") {
       const session = stripeEvent.data.object;
       const linkMap = {
-        "plink_1URMC5B545EsmqP6lJEk5kAD": "spongebob"
+"plink_1URH5fB545EsmqP6TD5NiGEK": "spongebob",
+  "plink_1URM7LB545EsmqP6jUF72Lml": "patrick",
+  "plink_1URMC5B545EsmqP6lJEk5kAD": "squidward"
         // add other plink_ IDs here
       };
 
