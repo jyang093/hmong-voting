@@ -254,26 +254,33 @@
     grid.appendChild(card);
   });
 
-  let currentQty = 1;
-  function openCheckout(name) {
-    document.getElementById('modal-name').textContent = 'Vote for ' + name;
-    currentQty = 1;
-    document.getElementById('qty').textContent = 1;
-    document.getElementById('total').textContent = '5.00';
-    document.getElementById('checkout-modal').classList.add('open');
-  }
-  function closeModal() {
-    document.getElementById('checkout-modal').classList.remove('open');
-  }
-  function changeQty(delta) {
-    currentQty = Math.max(1, currentQty + delta);
-    document.getElementById('qty').textContent = currentQty;
-    document.getElementById('total').textContent = (currentQty * 5).toFixed(2);
-  }
-  document.getElementById('checkout-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
-  });
 </script>
 
+ <script>
+  async function loadRanking() {
+    try {
+      const res = await fetch("/.netlify/functions/votes");
+      const data = await res.json();
+      const list = document.getElementById("ranking-list");
+      const contestantMap = {
+        spongebob: "SpongeBob",
+        patrick: "Patrick",
+        squidward: "Squidward"
+      };
+      const sorted = Object.keys(contestantMap)
+        .map(id => ({ name: contestantMap[id], count: data[id] || 0 }))
+        .sort((a, b) => b.count - a.count);
+      list.innerHTML = sorted.map((item, i) =>
+        `<div class="rank-item"><span>${i + 1}. ${item.name}</span><span>${item.count} votes</span></div>`
+      ).join("");
+    } catch (e) {
+      document.getElementById("ranking-list").innerHTML =
+        "<p style='text-align:center;color:#888;'>Ranking will update when votes come in</p>";
+    }
+  }
+  loadRanking();
+  setInterval(loadRanking, 10000);
+</script>
+ 
 </body>
 </html>
